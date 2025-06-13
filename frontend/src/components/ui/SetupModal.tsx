@@ -1,7 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Agent } from '../../types/agent';
-import logo from '../../assets/logo.png';
 
 interface SetupModalProps {
   isOpen: boolean;
