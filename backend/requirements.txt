@@ -1,8 +1,8 @@
-fastapi
-uvicorn
-python-dotenv
-httpx
-azure-ai-agents
-githubkit
-aiohttp
-azure-identity
+fastapi>=0.115.0,<0.116.0
+uvicorn>=0.34.0,<0.35.0
+python-dotenv>=1.1.0,<2.0.0
+httpx>=0.28.0,<0.29.0
+azure-ai-agents>=1.0.0,<2.0.0
+githubkit>=0.12.0,<0.13.0
+aiohttp>=3.12.0,<4.0.0
+azure-identity>=1.23.0,<2.0.0
