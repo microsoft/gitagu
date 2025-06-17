@@ -1,0 +1,30 @@
+name: Codex Playground Task
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Natural-language task for Codex"
+        required: true
+      task_id:
+        description: "Unique task identifier"
+        required: true
+      azure_openai_endpoint:
+        description: "Azure OpenAI endpoint"
+        required: true
+      azure_openai_key:
+        description: "Azure OpenAI API key"
+        required: true
+      azure_openai_deployment:
+        description: "Azure OpenAI deployment name"
+        required: true
+        default: "o4-mini"
+
+jobs:
+  codex-task:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: false  # This ensures the workflow never runs
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4

@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 import json
 import asyncio
 import os
-from .models.schemas import RepositoryAnalysisRequest, RepositoryAnalysisResponse, RepositoryInfoResponse, AnalysisProgressUpdate, TaskBreakdownRequest, TaskBreakdownResponse, Task, DevinSessionRequest, DevinSessionResponse
+from .models.schemas import RepositoryAnalysisRequest, RepositoryAnalysisResponse, RepositoryInfoResponse, AnalysisProgressUpdate, TaskBreakdownRequest, TaskBreakdownResponse, Task, DevinSessionRequest, DevinSessionResponse, CodexPlaygroundRequest, CodexPlaygroundResponse, PlaygroundTaskStatus, RunnerTokenRequest
 from .services.github import GitHubService
 from .services.agent import AzureAgentService
 from .config import CORS_ORIGINS
@@ -340,3 +340,96 @@ async def create_devin_session(request: DevinSessionRequest):
     except Exception as e:
         logger.error(f"Error creating Devin session: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to create Devin session: {str(e)}")
+
+@app.post("/api/playground/start")
+async def start_playground_task(
+    request: CodexPlaygroundRequest,
+    github_service: GitHubService = Depends(get_github_service)
+):
+    """Start a new Codex playground task in GitHub Actions."""
+    try:
+        import uuid
+        task_id = str(uuid.uuid4())
+        
+        workflow_inputs = {
+            "prompt": request.prompt,
+            "task_id": task_id,
+            "azure_openai_endpoint": request.azure_openai_endpoint,
+            "azure_openai_key": request.azure_openai_key,
+            "azure_openai_deployment": request.azure_openai_deployment
+        }
+        
+        success = await github_service.dispatch_workflow(
+            owner=request.owner,
+            repo=request.repo,
+            workflow_id="codex-playground.yml",
+            inputs=workflow_inputs
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to dispatch workflow")
+        
+        return CodexPlaygroundResponse(
+            task_id=task_id,
+            status="queued"
+        )
+    except Exception as e:
+        logger.error(f"Error starting playground task: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/playground/status/{task_id}")
+async def get_playground_status(
+    task_id: str,
+    owner: str,
+    repo: str,
+    github_service: GitHubService = Depends(get_github_service)
+):
+    """Get status of a playground task."""
+    try:
+        runs = await github_service.get_workflow_runs(owner, repo, "codex-playground.yml")
+        
+        matching_run = None
+        for run in runs:
+            if task_id in str(run.get("html_url", "")):
+                matching_run = run
+                break
+        
+        if not matching_run:
+            return PlaygroundTaskStatus(task_id=task_id, status="not_found")
+        
+        return PlaygroundTaskStatus(
+            task_id=task_id,
+            status=matching_run["status"],
+            workflow_run_id=matching_run["id"],
+            logs_url=matching_run["html_url"]
+        )
+    except Exception as e:
+        logger.error(f"Error getting playground status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/playground/logs/{task_id}")
+async def get_playground_logs(
+    task_id: str,
+    owner: str,
+    repo: str,
+    github_service: GitHubService = Depends(get_github_service)
+):
+    """Get logs URL for a playground task."""
+    try:
+        runs = await github_service.get_workflow_runs(owner, repo, "codex-playground.yml")
+        
+        matching_run = None
+        for run in runs:
+            if task_id in str(run.get("html_url", "")):
+                matching_run = run
+                break
+        
+        if not matching_run:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        logs_url = await github_service.get_workflow_logs(owner, repo, matching_run["id"])
+        
+        return {"logs_url": logs_url, "workflow_url": matching_run["html_url"]}
+    except Exception as e:
+        logger.error(f"Error getting playground logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

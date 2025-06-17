@@ -261,3 +261,63 @@ class GitHubService:
             print(f"Detailed error: {repr(e)}")
             
             raise RuntimeError(f"Failed to fetch repository data: {error_message}")
+            
+    async def create_runner_token(self, owner: str, repo: str) -> Optional[Dict[str, Any]]:
+        """Create a registration token for GitHub Actions runners."""
+        try:
+            response = gh().rest.actions.create_registration_token_for_repo(
+                owner=owner, repo=repo
+            ).parsed_data
+            return {
+                "token": response.token,
+                "expires_at": response.expires_at
+            }
+        except Exception as e:
+            print(f"Error creating runner token: {str(e)}")
+            return None
+
+    async def dispatch_workflow(self, owner: str, repo: str, workflow_id: str, inputs: Dict[str, str]) -> Optional[bool]:
+        """Dispatch a workflow with given inputs."""
+        try:
+            gh().rest.actions.create_workflow_dispatch(
+                owner=owner,
+                repo=repo,
+                workflow_id=workflow_id,
+                ref="main",
+                inputs=inputs
+            )
+            return True
+        except Exception as e:
+            print(f"Error dispatching workflow: {str(e)}")
+            return False
+
+    async def get_workflow_runs(self, owner: str, repo: str, workflow_id: str) -> List[Dict[str, Any]]:
+        """Get recent workflow runs for a workflow."""
+        try:
+            response = gh().rest.actions.list_workflow_runs(
+                owner=owner, repo=repo, workflow_id=workflow_id
+            ).parsed_data
+            return [
+                {
+                    "id": run.id,
+                    "status": run.status,
+                    "conclusion": run.conclusion,
+                    "created_at": run.created_at,
+                    "html_url": run.html_url
+                }
+                for run in response.workflow_runs[:5]
+            ]
+        except Exception as e:
+            print(f"Error getting workflow runs: {str(e)}")
+            return []
+
+    async def get_workflow_logs(self, owner: str, repo: str, run_id: int) -> Optional[str]:
+        """Get logs for a specific workflow run."""
+        try:
+            response = gh().rest.actions.download_workflow_run_logs(
+                owner=owner, repo=repo, run_id=run_id
+            )
+            return response.url if hasattr(response, 'url') else None
+        except Exception as e:
+            print(f"Error getting workflow logs: {str(e)}")
+            return None
