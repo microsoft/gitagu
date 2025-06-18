@@ -66,7 +66,7 @@ const PlaygroundModal: React.FC<PlaygroundModalProps> = ({
         
         setTimeout(() => {
           pollTaskStatus(result.task_id);
-        }, 2000);
+        }, POLLING_INTERVAL_MS);
       } else {
         const errorData = await response.json();
         setError(errorData.detail || 'Failed to start task');
