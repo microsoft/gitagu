@@ -454,3 +454,7 @@ src/nohup.out
 frontend/.vite/deps/
 
 get-docker.sh
+
+frontend/pnpm-lock.yaml
+
+frontend/tsconfig.tsbuildinfo

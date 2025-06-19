@@ -41,7 +41,7 @@ const HomePage: React.FC = () => {
   };
 
   const [activeCategory, setActiveCategory] =
-    useState<AgentCategory>('async-swe');
+    useState<AgentCategory>('all');
   const filteredAgents = agents.filter(
     (a) => activeCategory === 'all' || a.category === activeCategory
   );
