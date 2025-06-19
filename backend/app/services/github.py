@@ -276,14 +276,19 @@ class GitHubService:
             print(f"Error creating runner token: {str(e)}")
             return None
 
-    async def dispatch_workflow(self, owner: str, repo: str, workflow_id: str, inputs: Dict[str, str]) -> Optional[bool]:
+    async def dispatch_workflow(self, owner: str, repo: str, workflow_id: str, inputs: Dict[str, str], ref: Optional[str] = None) -> Optional[bool]:
         """Dispatch a workflow with given inputs."""
         try:
+            # Fetch the default branch if ref is not provided
+            if not ref:
+                repo_data = gh().rest.repos.get(owner=owner, repo=repo).parsed_data
+                ref = repo_data.default_branch
+
             gh().rest.actions.create_workflow_dispatch(
                 owner=owner,
                 repo=repo,
                 workflow_id=workflow_id,
-                ref="main",
+                ref=ref,
                 inputs=inputs
             )
             return True
