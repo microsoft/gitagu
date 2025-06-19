@@ -2005,6 +2005,126 @@
     gap: 1rem;
   }
 
+  /* Tab Navigation Styles */
+  .tab-navigation {
+    display: flex;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+    margin: 0;
+  }
+
+  .tab-button {
+    flex: 1;
+    padding: 1rem 2rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .tab-button:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .tab-button.active {
+    color: var(--azure-teal);
+    background: rgba(6, 182, 212, 0.1);
+  }
+
+  .tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--azure-teal);
+  }
+
+  /* Manual Tasks Styles */
+  .manual-tasks-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .manual-tasks-header h3 {
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+  }
+
+  .manual-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .manual-task-item {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+  }
+
+  .manual-task-item:hover {
+    border-color: rgba(6, 182, 212, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .manual-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .manual-task-header h4 {
+    color: var(--text-primary);
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .btn-icon {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-icon:hover {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: #dc3545;
+    color: #dc3545;
+  }
+
+  .manual-task-item .form-textarea {
+    margin-bottom: 0;
+  }
+
+  .manual-tasks-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
   /* Mobile responsive for Multi Devin modal */
   @media (max-width: 768px) {
     .form-row {
@@ -2027,6 +2147,25 @@
 
     .modal-footer .btn-primary,
     .modal-footer .btn-secondary {
+      width: 100%;
+    }
+
+    .tab-button {
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .manual-task-item {
+      padding: 1rem;
+    }
+
+    .manual-tasks-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .manual-tasks-actions .btn-primary,
+    .manual-tasks-actions .btn-secondary {
       width: 100%;
     }
   }

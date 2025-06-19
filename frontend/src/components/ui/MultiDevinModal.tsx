@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ExternalLink, Plus, Play } from 'lucide-react';
+import { X, ExternalLink, Plus, Play, Minus } from 'lucide-react';
 import SetupModal from './SetupModal';
 import agents from '../../data/agents';
 
@@ -14,12 +14,18 @@ interface Task {
   error?: string;
 }
 
+interface ManualTask {
+  id: string;
+  description: string;
+}
+
 interface MultiDevinModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) => {
+  const [activeTab, setActiveTab] = useState<'auto' | 'manual'>('auto');
   const [apiKey, setApiKey] = useState('');
   const [userRequest, setUserRequest] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
@@ -28,6 +34,15 @@ const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) =>
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isBreakingDown, setIsBreakingDown] = useState(false);
   const [setupModalOpen, setSetupModalOpen] = useState(false);
+
+  // Manual tasks state
+  const [manualTasks, setManualTasks] = useState<ManualTask[]>(() => 
+    Array.from({ length: 5 }, (_, i) => ({
+      id: `manual-${i}`,
+      description: ''
+    }))
+  );
+  const [processedManualTasks, setProcessedManualTasks] = useState<Task[]>([]);
 
   const handleEscapeKey = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Escape') {
@@ -133,11 +148,23 @@ const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) =>
       return;
     }
 
-    setTasks(prevTasks =>
-      prevTasks.map(t =>
-        t.id === task.id ? { ...t, status: 'creating' } : t
-      )
-    );
+    const updateTaskStatus = (taskId: string, updates: Partial<Task>) => {
+      if (activeTab === 'auto') {
+        setTasks(prevTasks =>
+          prevTasks.map(t =>
+            t.id === taskId ? { ...t, ...updates } : t
+          )
+        );
+      } else {
+        setProcessedManualTasks(prevTasks =>
+          prevTasks.map(t =>
+            t.id === taskId ? { ...t, ...updates } : t
+          )
+        );
+      }
+    };
+
+    updateTaskStatus(task.id, { status: 'creating' });
 
     try {
       // Build the prompt with optional repo prefix
@@ -177,32 +204,62 @@ const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) =>
 
       const sessionData = await response.json();
       
-      setTasks(prevTasks =>
-        prevTasks.map(t =>
-          t.id === task.id
-            ? {
-                ...t,
-                status: 'created',
-                sessionId: sessionData.session_id,
-                sessionUrl: sessionData.session_url,
-              }
-            : t
-        )
-      );
+      updateTaskStatus(task.id, {
+        status: 'created',
+        sessionId: sessionData.session_id,
+        sessionUrl: sessionData.session_url,
+      });
     } catch (error) {
       console.error('Error creating Devin session:', error);
-      setTasks(prevTasks =>
-        prevTasks.map(t =>
-          t.id === task.id
-            ? {
-                ...t,
-                status: 'error',
-                error: error instanceof Error ? error.message : 'Unknown error',
-              }
-            : t
-        )
-      );
+      updateTaskStatus(task.id, {
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
+  };
+
+  const addMoreManualTasks = () => {
+    const newTasks = Array.from({ length: 3 }, (_, i) => ({
+      id: `manual-${Date.now()}-${i}`,
+      description: ''
+    }));
+    setManualTasks(prev => [...prev, ...newTasks]);
+  };
+
+  const removeManualTask = (taskId: string) => {
+    setManualTasks(prev => prev.filter(task => task.id !== taskId));
+  };
+
+  const updateManualTask = (taskId: string, value: string) => {
+    setManualTasks(prev =>
+      prev.map(task =>
+        task.id === taskId ? { ...task, description: value } : task
+      )
+    );
+  };
+
+  const processManualTasks = () => {
+    const validTasks = manualTasks.filter(task => task.description.trim());
+    
+    if (validTasks.length === 0) {
+      alert('Please fill in at least one task description');
+      return;
+    }
+
+    const processedTasks: Task[] = validTasks.map((task, index) => {
+      // Generate a title from the first few words of the description
+      const title = task.description.trim().split(' ').slice(0, 6).join(' ') + 
+                   (task.description.trim().split(' ').length > 6 ? '...' : '');
+      
+      return {
+        id: `processed-${task.id}`,
+        title: title || `Task ${index + 1}`,
+        description: task.description.trim(),
+        status: 'pending' as const,
+      };
+    });
+
+    setProcessedManualTasks(processedTasks);
   };
 
   const resetModal = () => {
@@ -214,7 +271,29 @@ const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) =>
     setTasks([]);
     setHasBreakdown(false);
     setIsBreakingDown(false);
+    setManualTasks(Array.from({ length: 5 }, (_, i) => ({
+      id: `manual-${i}`,
+      description: ''
+    })));
+    setProcessedManualTasks([]);
+    setActiveTab('auto');
   };
+
+  const resetCurrentTab = () => {
+    if (activeTab === 'auto') {
+      setTasks([]);
+      setHasBreakdown(false);
+      setUserRequest('');
+    } else {
+      setManualTasks(Array.from({ length: 5 }, (_, i) => ({
+        id: `manual-${i}`,
+        description: ''
+      })));
+      setProcessedManualTasks([]);
+    }
+  };
+
+  const currentTasks = activeTab === 'auto' ? tasks : processedManualTasks;
 
   const modalContent = (
     <div className="fullscreen-modal-overlay" onClick={handleOverlayClick}>
@@ -228,8 +307,25 @@ const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) =>
             </button>
           </div>
         </div>
+
+        {/* Tab Navigation */}
+        <div className="tab-navigation">
+          <button
+            className={`tab-button ${activeTab === 'auto' ? 'active' : ''}`}
+            onClick={() => setActiveTab('auto')}
+          >
+            Auto Breakdown
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'manual' ? 'active' : ''}`}
+            onClick={() => setActiveTab('manual')}
+          >
+            Manual Tasks
+          </button>
+        </div>
+
         <div className="fullscreen-modal-content">
-        {/* API Key Section */}
+        {/* API Key Section - Common to both tabs */}
         <div className="form-section">
           <label className="form-label">
             Devin API Key
@@ -262,30 +358,7 @@ const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) =>
           </p>
         </div>
 
-        {/* User Request Section */}
-        <div className="form-section">
-          <label className="form-label">
-            Your Request
-            <a
-              href="https://deepwiki.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="api-key-link"
-            >
-              <ExternalLink size={16} />
-              Need help breaking down tasks?
-            </a>
-          </label>
-          <textarea
-            className="form-textarea"
-            placeholder="Describe the work you want Devin to do. This will be broken down into multiple tasks..."
-            rows={4}
-            value={userRequest}
-            onChange={(e) => setUserRequest(e.target.value)}
-          />
-        </div>
-
-        {/* Repository URL Section */}
+        {/* Repository URL Section - Common to both tabs */}
         <div className="form-section">
           <label className="form-label">Context Repository URL (Optional)</label>
           <input
@@ -300,7 +373,7 @@ const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) =>
           </p>
         </div>
 
-        {/* Optional Fields */}
+        {/* Optional Fields - Common to both tabs */}
         <div className="form-row">
           <div className="form-section">
             <label className="form-label">
@@ -346,38 +419,123 @@ const MultiDevinModal: React.FC<MultiDevinModalProps> = ({ isOpen, onClose }) =>
           </div>
         </div>
 
-        {/* Breakdown Button */}
-        {!hasBreakdown && (
-          <div className="form-section">
-            <button
-              className="btn-primary"
-              onClick={breakdownTasks}
-              disabled={isBreakingDown || !userRequest.trim()}
-            >
-              <Plus size={16} />
-              {isBreakingDown ? 'Breaking down tasks...' : 'Break down into tasks'}
-            </button>
-          </div>
+        {/* Auto Breakdown Tab Content */}
+        {activeTab === 'auto' && (
+          <>
+            {/* User Request Section */}
+            <div className="form-section">
+              <label className="form-label">
+                Your Request
+                <a
+                  href="https://deepwiki.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="api-key-link"
+                >
+                  <ExternalLink size={16} />
+                  Need help breaking down tasks?
+                </a>
+              </label>
+              <textarea
+                className="form-textarea"
+                placeholder="Describe the work you want Devin to do. This will be broken down into multiple tasks..."
+                rows={4}
+                value={userRequest}
+                onChange={(e) => setUserRequest(e.target.value)}
+              />
+            </div>
+
+            {/* Breakdown Button */}
+            {!hasBreakdown && (
+              <div className="form-section">
+                <button
+                  className="btn-primary"
+                  onClick={breakdownTasks}
+                  disabled={isBreakingDown || !userRequest.trim()}
+                >
+                  <Plus size={16} />
+                  {isBreakingDown ? 'Breaking down tasks...' : 'Break down into tasks'}
+                </button>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Tasks Section */}
-        {tasks.length > 0 && (
+        {/* Manual Tasks Tab Content */}
+        {activeTab === 'manual' && (
+          <>
+            <div className="form-section">
+                             <div className="manual-tasks-header">
+                 <h3>Manual Task Input</h3>
+                 <p className="form-help">
+                   Enter your tasks manually. Each task needs a description to be processed.
+                 </p>
+               </div>
+
+               <div className="manual-tasks-list">
+                 {manualTasks.map((task, index) => (
+                   <div key={task.id} className="manual-task-item">
+                     <div className="manual-task-header">
+                       <h4>Task {index + 1}</h4>
+                       {manualTasks.length > 5 && (
+                         <button
+                           className="btn-icon"
+                           onClick={() => removeManualTask(task.id)}
+                           title="Remove task"
+                         >
+                           <Minus size={16} />
+                         </button>
+                       )}
+                     </div>
+                     <textarea
+                       className="form-textarea"
+                       placeholder="Describe what you want Devin to do..."
+                       rows={4}
+                       value={task.description}
+                       onChange={(e) => updateManualTask(task.id, e.target.value)}
+                     />
+                   </div>
+                 ))}
+               </div>
+
+              <div className="manual-tasks-actions">
+                <button
+                  className="btn-secondary"
+                  onClick={addMoreManualTasks}
+                >
+                  <Plus size={16} />
+                  Add 3 More Tasks
+                </button>
+                
+                {processedManualTasks.length === 0 && (
+                  <button
+                    className="btn-primary"
+                    onClick={processManualTasks}
+                  >
+                    <Play size={16} />
+                    Process Tasks
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Tasks Section - Common display for both tabs */}
+        {currentTasks.length > 0 && (
           <div className="tasks-section">
             <div className="tasks-header">
               <h3>Tasks</h3>
               <button
                 className="btn-secondary"
-                onClick={() => {
-                  setTasks([]);
-                  setHasBreakdown(false);
-                }}
+                onClick={resetCurrentTab}
               >
                 Reset Tasks
               </button>
             </div>
 
             <div className="tasks-list">
-              {tasks.map((task) => (
+              {currentTasks.map((task) => (
                 <div key={task.id} className="task-item">
                   <div className="task-content">
                     <h4 className="task-title">{task.title}</h4>
