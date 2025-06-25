@@ -4,6 +4,7 @@ import { Agent } from '../types/agent';
 import { getAgentLogo } from '../utils/agentUtils';
 import SetupModal from './ui/SetupModal';
 import MultiDevinModal from './ui/MultiDevinModal';
+import PlaygroundModal from './ui/PlaygroundModal';
 
 interface AgentCardProps {
   agent: Agent;
@@ -67,6 +68,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
 }) => {
   const [setupModalOpen, setSetupModalOpen] = useState(false);
   const [multiDevinModalOpen, setMultiDevinModalOpen] = useState(false);
+  const [playgroundModalOpen, setPlaygroundModalOpen] = useState(false);
 
   return (
     <div className="agent-card" data-category={agent.category}>
@@ -171,12 +173,22 @@ const AgentCard: React.FC<AgentCardProps> = ({
 
       <div className="agent-actions">
         {showAnalyzeButton && onAnalyzeClick ? (
-          <button
-            className="agent-btn primary"
-            onClick={() => onAnalyzeClick(agent.id, repoName)}
-          >
-            Analyze Repo for Configuration
-          </button>
+          <>
+            <button
+              className="agent-btn primary"
+              onClick={() => onAnalyzeClick(agent.id, repoName)}
+            >
+              Analyze Repo for Configuration
+            </button>
+            {agent.id === 'codex-cli' && (
+              <button 
+                className="agent-btn secondary"
+                onClick={() => setPlaygroundModalOpen(true)}
+              >
+                🎮 Playground
+              </button>
+            )}
+          </>
         ) : (
           <>
             <button 
@@ -215,6 +227,15 @@ const AgentCard: React.FC<AgentCardProps> = ({
         <MultiDevinModal 
           isOpen={multiDevinModalOpen}
           onClose={() => setMultiDevinModalOpen(false)}
+        />
+      )}
+      
+      {agent.id === 'codex-cli' && (
+        <PlaygroundModal 
+          isOpen={playgroundModalOpen}
+          onClose={() => setPlaygroundModalOpen(false)}
+          repoOwner={repoName?.split('/')[0] || ''}
+          repoName={repoName?.split('/')[1] || ''}
         />
       )}
     </div>

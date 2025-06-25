@@ -63,3 +63,29 @@ class DevinSessionRequest(BaseModel):
 class DevinSessionResponse(BaseModel):
     session_id: str
     session_url: str
+
+class CodexPlaygroundRequest(BaseModel):
+    owner: str
+    repo: str
+    prompt: str
+    azure_openai_endpoint: str
+    azure_openai_key: str
+    azure_openai_deployment: str = "gpt-4o"
+
+class CodexPlaygroundResponse(BaseModel):
+    task_id: str
+    workflow_run_id: Optional[int] = None
+    runner_name: Optional[str] = None
+    status: str
+
+class PlaygroundTaskStatus(BaseModel):
+    task_id: str
+    status: str
+    workflow_run_id: Optional[int] = None
+    logs_url: Optional[str] = None
+    artifacts_url: Optional[str] = None
+    error: Optional[str] = None
+
+class RunnerTokenRequest(BaseModel):
+    owner: str
+    repo: str
